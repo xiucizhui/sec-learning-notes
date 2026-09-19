@@ -1,0 +1,21 @@
+2026.08.31 笔记
+
+搜索型注入：
+底层SQL原型使用like模糊查询和%通配符：
+“select * from user where username like '%$username%';”。
+“%”在MySQL里代表匹配任意字符。比如输入ko，就变成like '%ko%'，找出名字包含ko的用户。
+这里不光有单引号，前后还套了两个%，所以payload要把%也考虑进去：
+payload：“k%' or 1=1 -- #”。
+拼接完整 SQL：“select * from user where username like '%k%' or 1=1 -- #%';”。
+k%：把前面的%用完。
+
+带括号的字符型注入：
+简写：括号闭合型字符注入，对应皮卡丘靶场的xx型注入（非专业命名）。
+
+底层SQL原型：“select * from user where username=('$username');”
+重点：参数被括号+单引号两层包裹，('内容')，比普通字符型多一对括号。
+Payload：“kobe') or 1=1 -- #”
+拼接完整SQL：“select * from user where username=('kobe') or 1=1 -- #');”
+')：闭合原有('$username')的单引号+右括号。
+
+坑点：

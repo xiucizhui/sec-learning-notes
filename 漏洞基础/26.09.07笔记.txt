@@ -1,0 +1,13 @@
+2026.09.07 笔记
+
+BP的Decode模块：常用URL编码，URL不能直接传空格、括号、单引号等特殊字符，会转为%+十六进制（如%20=空格，%27=单引号'）。
+Decode as URL（解码）：%xx还原成明文，看懂抓包内容。
+Encode as URL（编码）：明文特殊符号生成%xx，用于发包。
+注：
+GET参数、xwwwformurlencoded POST表单，特殊符号必须URL编码。
+MySQL里的0x7e是SQL语法，不要做URL编码。
+不要双重编码：%20再次编码变成%2520，payload直接失效。
+右键的“URL-encode as you type”可以默认编码输入的特殊符号。
+区分两层：
+HTTP传输层：%20 %27 %7E（URL编码）。
+MySQL语法层：0x7e（数据库识别，不归HTTP管）。

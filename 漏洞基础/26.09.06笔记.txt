@@ -1,0 +1,12 @@
+2026.09.06 笔记
+
+delete注入：
+底层SQL原型：“delete from message where id=用户可控参数；”
+数字型注入，没有引号闭合。
+注意：delete是删除语句，靶场本地练习没事，真实环境极其危险；不要写or 1=1，会		把整张表数据全部删掉，靶场也要尽量规避。
+Payload把“id=用户可控参数”改为“id=用户可控参数 and updatexml(1,concat(0x7e,(SQL语句),0x7e),1)”（即加上报错注入）。
+拼接完整SQL：
+“delete from message where id=用户可控参数 and updatexml(1,concat(0x7e,(SQL语句),0x7e),1)；”
+注：
+1、因为是and且后面为报错（false），所以delete并不会执行。
+2、要用BP抓取delete的包来进行注入，注意对特殊字符的编码（如空格为%20），可利用BP的Decode模块进行快捷转换。

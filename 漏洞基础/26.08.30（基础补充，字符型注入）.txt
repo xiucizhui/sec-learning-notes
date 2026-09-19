@@ -1,0 +1,12 @@
+2026.08.30 笔记
+Proxy代理≠VPN，代理只是转发HTTP/HTTPS应用层流量，而VPN是转发整套网卡流量。
+
+Payload（攻击载荷）：
+概念：攻击者构造的恶意输入，用于触发漏洞，改变程序原有业务逻辑，达成越权、数据读取等目标。
+不同漏洞payload完全不一样，如：SQL注入是SQL语句片段；XSS是JS代码。
+本身不是病毒，只是一段输入内容；漏洞存在的时候它才生效。
+
+字符型注入（GET）：
+底层SQL原型：“select * from user where username='输入';”。
+payload：“lisi' or 1=1 -- #”。
+拼接完整 SQL：“select * from user where username='lisi' or 1=1 -- #';”。
