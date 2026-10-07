@@ -1,0 +1,8 @@
+26.09.21 笔记
+SQLmap基础：
+对于一个IP的扫描，sqlmap会把记录保存。
+默认自动保存在：“/home/kali/.local/share/sqlmap/output/（目标IP）/”。
+里面有：
+dump/文件夹：存放导出的数据库表（csv文本）。
+log：扫描日志。
+session：注入点缓存文件。
