@@ -1,0 +1,72 @@
+26.10.29 笔记：
+皮卡丘靶场其他XSS关卡：
+2、关于输出位置、过滤绕过、防御函数失效：
+过滤：
+有标签被代码过滤，可以试一下其他的payload。
+
+补充其他绕过方式：
+大小写绕过（<SCRIPT>alert(1)</SCRIPT>）。
+标签嵌套绕过。
+
+htmlspecialchars：
+htmlspecialchars（HTML特殊字符转义）
+
+htmlspecialchars()函数：默认把“<、>、&、"”转义成实体字符。
+
+htmlspecialchars()这种PHP函数是写在服务器上的.php源文件里的，浏览器访问网页时不会下发php源代码，所以不能通过在HTML里面找到该函数来进行判断。
+
+实战渗透是黑盒测试，不知道后端是什么语言、写了什么代码。只能靠输入字符、看输出的实体编码，反推过滤逻辑。
+
+实体编码只在HTML标签里面生效，在JS代码里，浏览器不会把实体还原成符号，后端用 htmlspecialchars在这里无效。
+
+浏览器页面右键查看源码（Ctrl + U），输入“<、>、&、"、'”进行测试：
+1、无转义
+2、有转义：
+a、htmlspecialchars ($str)（默认只转“<、>、&、"”，单引号可用）：
+可用“’ onclick=alert(1) //”等。
+b、htmlspecialchars ($str,ENT_QUOTES)（单引号也不可用）：
+5个符号全部实体编码，属性闭合这个方法将不能用。
+
+其他方法：
+场景1：输出在href属性（<a href="xxx">）。
+尝试javascript伪协议：<a href="javascript:alert(1)">xxx</a>。
+看后端是否过滤javascript:关键字。
+
+场景2：输出在js代码块（<script>var x='用户输入'</script>）。
+实体编码的机制在JS代码块里不会生效，实体编码防御失效，用\转义引号	闭合JS字符串。
+payload例子：“\';alert(1);//”。
+“\”，专门用来对抗后端addslashes自动添加的转义反斜杠，“\”会变成“\’”。	拼接后变成“var x='\\';alert(1);//'”，“\\”是普通文本。
+
+场景3：输出在标签文本之间（<div>用户输入</div>）
+<>被转义，无法注入HTML标签和事件，常规XSS失效，基本没办法。
+
+场景4：输出在特殊属性，比如src/background/formaction等。
+看属性特性，部分属性支持不依赖引号闭合的payload。
+
+href输出：
+特点：
+输入内容会进入 <a href="输入内容"> 里。
+对于皮卡丘的这个关卡，后端还用了htmlspecialchars(...,ENT_QUOTES)，对应上一个关卡htmlspecialchars ($str,ENT_QUOTES)的解决办法的第一种场景。
+即：
+漏洞原理：href属性支持伪协议javascript:。点击a链接时，浏览器会把javascript:后面的代码直接当成JS执行，不需要去闭合引号。
+
+防御思路：白名单校验，href只允许http://、https://，禁止javascript:伪协议。
+
+js输出：
+通用前提：用户输入直接塞进<script>标签内，被包裹在引号里（var str = '用户输入';或者var str = "用户输入";）。
+
+注：
+1、这里是JS语法环境，不是HTML。HTML实体编码在这里不起作用。
+2、构造payload要看后端是否开启addslashes（输入的单引号、双引号、反斜杠、NULL字符（空字符）会被加反斜杠转义）。
+
+以皮卡丘关卡为例：
+payload：“';alert(1);//”。
+拼入HTML：
+“““
+<script>
+$ms='';alert(1);//';     # 一共两部分，“’’;”和alert(1);，后面的“’”被//注释。
+if($ms.length != 0){
+if($ms == 'tmac'){
+......
+</script>
+”””

@@ -1,0 +1,36 @@
+26.10.31 笔记：
+XSS流程总结及常用payload：
+
+一、总结流程：
+大致流程：
+输入标记，源码看输出位置，探测过滤规则，匹配payload，弹窗验证，实施利用。
+
+1、输入测试标记，看输出位置（最重要）：
+输入简单字符串，比如：输入test123提交，查看页面源码，找到test123的输出位置：
+在标签之间，如<div>test123</div>：文本节点，可插入新的HTML标签（如img/svg）。
+在单/双引号属性内，如<div value="test123">：需要用“'”或“"”闭合引号。
+在标签内部，如<textarea>test123</textarea> / <script>test123</script>：特殊场景，	不	能直接用普通标签payload。
+目的：搞清楚输入内容被拼到HTML的哪个位置，决定用什么闭合符号。
+
+2、判断有没有过滤（过滤探测）：
+分别输入最简单的payload、<script>、构造payload用的特殊符号，查看源码，探测过滤规则。
+
+3、根据输出位置+过滤规则，构造payload：
+如：标签之间，过滤script：<img src=x onerror=alert(1)>；
+单引号属性内：' </span><svg onload=alert(1)>//；
+href属性内：javascript:alert(1)；
+......
+
+4、验证漏洞是否成功触发（弹窗）：
+弹出alert (1) ，确认 XSS 存在。
+
+5、利用（根据场景）：
+普通反射/DOM：构造恶意链接发给受害者。
+存储型：提交盲打payload（XSS平台），等待管理员访问。
+
+二、常用payload：
+<img src=x onerror=alert(1)>：src=x的图片地址不存在，触发onerror事件，直接弹窗。
+<svg onload=alert(1)>：svg渲染完成自动执行onload，触发弹窗。
+<a href=# onclick=alert(1)>test</a>：新建标签，点击触发。
+' onclick=alert(1)//：鼠标事件，点击触发。
+Javascript:alert(1)：Javascript是伪协议，加在支持跳转的属性中（如：href、src、form action），输入后点击生成的链接会激活后面的alert(1)。

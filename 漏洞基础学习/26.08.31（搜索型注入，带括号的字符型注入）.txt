@@ -17,5 +17,3 @@ k%：把前面的%用完。
 Payload：“kobe') or 1=1 -- #”
 拼接完整SQL：“select * from user where username=('kobe') or 1=1 -- #');”
 ')：闭合原有('$username')的单引号+右括号。
-
-坑点：
